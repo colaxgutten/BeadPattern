@@ -265,7 +265,6 @@ body {
 }
 .preview-loading .progress-bar { width: 80%; }
 #wizard-step-3.wizard-step { max-width: 1100px; }
-.input-text:focus { border-color: var(--primary); }
 
 /* ============================================================
    PATTERN VIEW
