@@ -1,4 +1,4 @@
-/* global HAMA_COLORS, HAMA_COLORS_LAB, findClosestColor, buildColorMap */
+/* global HAMA_COLORS, HAMA_COLORS_LAB, findClosestColor, findClosestColorByAlgorithm, buildColorMap */
 
 'use strict';
 
@@ -12,6 +12,8 @@ const state = {
   platesX: 1,
   platesY: 1,
   enabledColorCodes: new Set(HAMA_COLORS.map(c => c.code)),
+  selectedAlgorithm: 'cieLab',
+  processingCancelled: false,
 
   // generated pattern
   pendingPattern: null,   // { platesX, platesY, colorCodes }
@@ -51,13 +53,14 @@ document.getElementById('btn-load-pattern').addEventListener('click', async () =
 //  WIZARD BACK BUTTON
 // ============================================================
 document.getElementById('btn-wizard-back').addEventListener('click', () => {
-  // figure out current wizard step
   const active = document.querySelector('.wizard-step.active');
-  if (active && active.id === 'wizard-step-1') {
+  if (!active) { showView('view-home'); return; }
+  const step = parseInt(active.id.replace('wizard-step-', ''), 10);
+  if (step <= 1) {
     showView('view-home');
   } else {
-    // navigate to step 1
-    goToWizardStep(1);
+    if (step === 3) state.processingCancelled = true;
+    goToWizardStep(step - 1);
   }
 });
 
@@ -70,6 +73,8 @@ function resetWizard() {
   state.platesX = 1;
   state.platesY = 1;
   state.pendingPattern = null;
+  state.selectedAlgorithm = 'cieLab';
+  state.processingCancelled = false;
 
   const img = document.getElementById('image-preview');
   img.classList.add('hidden');
@@ -81,12 +86,17 @@ function resetWizard() {
   document.getElementById('plates-y').value = 1;
   updateSizeBeadCount();
 
-  // reset process step UI
-  document.getElementById('processing-progress').classList.add('hidden');
-  document.getElementById('process-result').classList.add('hidden');
-  document.getElementById('progress-fill').style.width = '0%';
+  // reset preview step UI
+  document.getElementById('preview-bead-canvas').classList.add('hidden');
+  document.getElementById('preview-loading').classList.add('hidden');
+  document.getElementById('preview-progress-fill').style.width = '0%';
+  document.getElementById('btn-step3-next').disabled = true;
+  document.getElementById('algorithm-select').value = 'cieLab';
+  document.getElementById('algorithm-description').textContent =
+    ALGORITHM_DESCRIPTIONS.cieLab;
+
+  // reset save step UI
   document.getElementById('pattern-name-input').value = '';
-  document.getElementById('wizard-nav-step3').classList.remove('hidden');
 
   goToWizardStep(1);
 }
@@ -195,12 +205,108 @@ document.getElementById('btn-step2-next').addEventListener('click', () => {
     alert('Please select at least one color.');
     return;
   }
-  buildProcessSummary();
   goToWizardStep(3);
+  generatePreview();
 });
 
 // ============================================================
-//  WIZARD – STEP 3 (Process)
+//  WIZARD – STEP 3 (Preview & Algorithm)
+// ============================================================
+const ALGORITHM_DESCRIPTIONS = {
+  cieLab: 'Euclidean distance in CIE Lab color space. Good balance of accuracy and speed.',
+  ciede2000: 'Advanced perceptual color difference formula. Most accurate but slower.',
+  rgb: 'Simple Euclidean distance in RGB color space. Fast but less perceptually accurate.',
+  weightedRgb: 'RGB distance weighted by human color perception. Good compromise.',
+};
+
+document.getElementById('algorithm-select').addEventListener('change', (e) => {
+  state.selectedAlgorithm = e.target.value;
+  document.getElementById('algorithm-description').textContent =
+    ALGORITHM_DESCRIPTIONS[state.selectedAlgorithm] || '';
+  state.processingCancelled = true;
+  generatePreview();
+});
+
+document.getElementById('btn-step3-prev').addEventListener('click', () => {
+  state.processingCancelled = true;
+  goToWizardStep(2);
+});
+
+document.getElementById('btn-step3-next').addEventListener('click', () => {
+  if (!state.pendingPattern) return;
+  buildProcessSummary();
+  goToWizardStep(4);
+});
+
+async function generatePreview() {
+  document.getElementById('preview-original').src = state.selectedImageDataUrl;
+
+  document.getElementById('preview-loading').classList.remove('hidden');
+  document.getElementById('preview-bead-canvas').classList.add('hidden');
+  document.getElementById('btn-step3-next').disabled = true;
+  document.getElementById('preview-progress-fill').style.width = '0%';
+
+  state.processingCancelled = false;
+
+  try {
+    const result = await processImage(
+      state.selectedAlgorithm,
+      document.getElementById('preview-progress-fill'),
+      document.getElementById('preview-progress-label')
+    );
+
+    if (state.processingCancelled || !result) return;
+
+    state.pendingPattern = result;
+
+    renderFullPreview(
+      document.getElementById('preview-bead-canvas'),
+      result.colorCodes, state.platesX, state.platesY
+    );
+
+    document.getElementById('preview-loading').classList.add('hidden');
+    document.getElementById('preview-bead-canvas').classList.remove('hidden');
+    document.getElementById('btn-step3-next').disabled = false;
+  } catch (err) {
+    if (state.processingCancelled) return;
+    document.getElementById('preview-loading').classList.add('hidden');
+    alert('Error processing image: ' + err.message);
+  }
+}
+
+function renderFullPreview(canvas, colorCodes, platesX, platesY) {
+  const W = platesX * 29;
+  const H = platesY * 29;
+  const maxDim = 400;
+  const beadPx = Math.max(1, Math.floor(maxDim / Math.max(W, H)));
+
+  canvas.width = W * beadPx;
+  canvas.height = H * beadPx;
+
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#1e1e2e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const code = colorCodes[y][x];
+      const color = colorMap[code];
+      ctx.fillStyle = color ? color.hex : '#1a1a1a';
+      if (beadPx >= 4) {
+        const cx = x * beadPx + beadPx / 2;
+        const cy = y * beadPx + beadPx / 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, beadPx * 0.44, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillRect(x * beadPx, y * beadPx, beadPx, beadPx);
+      }
+    }
+  }
+}
+
+// ============================================================
+//  WIZARD – STEP 4 (Save)
 // ============================================================
 function buildProcessSummary() {
   const totalBeadsW = state.platesX * 29;
@@ -210,27 +316,11 @@ function buildProcessSummary() {
     <div class="summary-row"><span class="summary-label">Grid size:</span><span>${state.platesX} × ${state.platesY} plates</span></div>
     <div class="summary-row"><span class="summary-label">Total beads:</span><span>${totalBeadsW} × ${totalBeadsH} = ${totalBeadsW * totalBeadsH}</span></div>
     <div class="summary-row"><span class="summary-label">Colors enabled:</span><span>${state.enabledColorCodes.size}</span></div>
+    <div class="summary-row"><span class="summary-label">Algorithm:</span><span>${document.getElementById('algorithm-select').selectedOptions[0].text}</span></div>
   `;
 }
 
-document.getElementById('btn-step3-prev').addEventListener('click', () => goToWizardStep(2));
-
-document.getElementById('btn-process').addEventListener('click', async () => {
-  document.getElementById('wizard-nav-step3').classList.add('hidden');
-  document.getElementById('processing-progress').classList.remove('hidden');
-  document.getElementById('process-result').classList.add('hidden');
-
-  try {
-    const pattern = await processImage();
-    state.pendingPattern = pattern;
-    document.getElementById('processing-progress').classList.add('hidden');
-    document.getElementById('process-result').classList.remove('hidden');
-  } catch (err) {
-    document.getElementById('processing-progress').classList.add('hidden');
-    document.getElementById('wizard-nav-step3').classList.remove('hidden');
-    alert('Error processing image: ' + err.message);
-  }
-});
+document.getElementById('btn-step4-prev').addEventListener('click', () => goToWizardStep(3));
 
 document.getElementById('btn-save-pattern').addEventListener('click', async () => {
   const name = document.getElementById('pattern-name-input').value.trim();
@@ -253,7 +343,8 @@ document.getElementById('btn-view-result').addEventListener('click', () => {
 // ============================================================
 //  IMAGE PROCESSING
 // ============================================================
-async function processImage() {
+async function processImage(algorithm, progressFillEl, progressLabelEl) {
+  algorithm = algorithm || 'cieLab';
   const W = state.platesX * 29;
   const H = state.platesY * 29;
 
@@ -280,12 +371,11 @@ async function processImage() {
 
   const total = W * H;
   let done = 0;
-  const progressFill = document.getElementById('progress-fill');
-  const progressLabel = document.getElementById('progress-label');
 
   // Process in chunks to allow UI updates
   const CHUNK = 500;
   for (let i = 0; i < total; i += CHUNK) {
+    if (state.processingCancelled) return null;
     const end = Math.min(i + CHUNK, total);
     for (let p = i; p < end; p++) {
       const r = pixels[p * 4];
@@ -293,13 +383,13 @@ async function processImage() {
       const b = pixels[p * 4 + 2];
       const x = p % W;
       const y = Math.floor(p / W);
-      const color = findClosestColor(r, g, b, state.enabledColorCodes);
+      const color = findClosestColorByAlgorithm(r, g, b, state.enabledColorCodes, algorithm);
       colorCodes[y][x] = color ? color.code : '11'; // fallback black
     }
     done = end;
     const pct = Math.round((done / total) * 100);
-    progressFill.style.width = pct + '%';
-    progressLabel.textContent = `Processing… ${pct}%`;
+    if (progressFillEl) progressFillEl.style.width = pct + '%';
+    if (progressLabelEl) progressLabelEl.textContent = `Processing… ${pct}%`;
     // yield to browser
     await new Promise(r => setTimeout(r, 0));
   }
