@@ -514,13 +514,17 @@ function reRenderZoom() {
 }
 
 // Scroll-to-zoom on the zoom canvas
+let _zoomRafPending = false;
 document.getElementById('plate-zoom-canvas').addEventListener('wheel', e => {
   e.preventDefault();
   const z = document._zoomState;
   if (!z) return;
   const delta = e.deltaY < 0 ? 2 : -2;
   z.beadPx = Math.min(60, Math.max(10, z.beadPx + delta));
-  reRenderZoom();
+  if (!_zoomRafPending) {
+    _zoomRafPending = true;
+    requestAnimationFrame(() => { _zoomRafPending = false; reRenderZoom(); });
+  }
 }, { passive: false });
 
 // Click on a bead to toggle completion
@@ -576,10 +580,14 @@ function updatePlateProgress(px, py) {
     done === total ? '✓ Complete' : `${done} / ${total} (${pct}%)`;
 }
 
+let _persistTimer = null;
 function persistCompletion() {
   if (state.currentPattern && state.currentPattern.name) {
     state.currentPattern.completed = state.completed;
-    window.electronAPI.savePattern(state.currentPattern.name, state.currentPattern);
+    clearTimeout(_persistTimer);
+    _persistTimer = setTimeout(() => {
+      window.electronAPI.savePattern(state.currentPattern.name, state.currentPattern);
+    }, 500);
   }
 }
 
