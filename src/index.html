@@ -59,7 +59,9 @@
         <div class="step-divider"></div>
         <div class="step" data-step="2"><span>2</span> Colors</div>
         <div class="step-divider"></div>
-        <div class="step" data-step="3"><span>3</span> Process</div>
+        <div class="step" data-step="3"><span>3</span> Preview</div>
+        <div class="step-divider"></div>
+        <div class="step" data-step="4"><span>4</span> Save</div>
       </div>
     </div>
 
@@ -115,35 +117,67 @@
       </div>
       <div class="wizard-nav">
         <button class="btn btn-ghost" id="btn-step2-prev">← Back</button>
-        <button class="btn btn-primary" id="btn-step2-next">Next: Process →</button>
+        <button class="btn btn-primary" id="btn-step2-next">Next: Preview →</button>
       </div>
     </div>
 
-    <!-- Step 3: Process & Save -->
+    <!-- Step 3: Algorithm & Preview -->
     <div id="wizard-step-3" class="wizard-step">
-      <h2>Process &amp; Save</h2>
+      <h2>Preview &amp; Algorithm</h2>
+
+      <div class="algorithm-select">
+        <label for="algorithm-select">Color Matching Algorithm:</label>
+        <select id="algorithm-select" class="input-text">
+          <option value="cieLab" selected>CIE76 Lab (Default)</option>
+          <option value="ciede2000">CIEDE2000 (Advanced Perceptual)</option>
+          <option value="rgb">RGB Euclidean</option>
+          <option value="weightedRgb">Weighted RGB</option>
+        </select>
+        <p class="hint" id="algorithm-description">Euclidean distance in CIE Lab color space. Good balance of accuracy and speed.</p>
+      </div>
+
+      <div class="preview-container">
+        <div class="preview-panel">
+          <h3>Original Image</h3>
+          <div class="preview-image-wrapper">
+            <img id="preview-original" alt="Original" />
+          </div>
+        </div>
+        <div class="preview-panel">
+          <h3>Bead Preview</h3>
+          <div class="preview-image-wrapper">
+            <canvas id="preview-bead-canvas" class="hidden"></canvas>
+            <div id="preview-loading" class="preview-loading hidden">
+              <div class="progress-bar"><div class="progress-fill" id="preview-progress-fill"></div></div>
+              <p class="progress-label" id="preview-progress-label">Generating preview…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wizard-nav">
+        <button class="btn btn-ghost" id="btn-step3-prev">← Back</button>
+        <button class="btn btn-primary" id="btn-step3-next" disabled>Next: Save →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Save -->
+    <div id="wizard-step-4" class="wizard-step">
+      <h2>Save Pattern</h2>
 
       <div class="process-summary" id="process-summary">
         <!-- Filled dynamically -->
       </div>
 
-      <div id="processing-progress" class="hidden">
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-        <p class="progress-label" id="progress-label">Processing…</p>
+      <p class="success-msg">✓ Pattern generated successfully!</p>
+      <div class="save-row">
+        <input type="text" id="pattern-name-input" class="input-text" placeholder="Pattern name…" maxlength="80" />
+        <button class="btn btn-primary" id="btn-save-pattern">Save Pattern</button>
       </div>
+      <button class="btn btn-secondary" id="btn-view-result">View Pattern</button>
 
-      <div id="process-result" class="hidden">
-        <p class="success-msg">✓ Pattern generated successfully!</p>
-        <div class="save-row">
-          <input type="text" id="pattern-name-input" class="input-text" placeholder="Pattern name…" maxlength="80" />
-          <button class="btn btn-primary" id="btn-save-pattern">Save Pattern</button>
-        </div>
-        <button class="btn btn-secondary" id="btn-view-result">View Pattern</button>
-      </div>
-
-      <div class="wizard-nav" id="wizard-nav-step3">
-        <button class="btn btn-ghost" id="btn-step3-prev">← Back</button>
-        <button class="btn btn-primary" id="btn-process">Generate Pattern</button>
+      <div class="wizard-nav">
+        <button class="btn btn-ghost" id="btn-step4-prev">← Back</button>
       </div>
     </div>
   </div>
