@@ -82,48 +82,18 @@
 
       <div class="size-section">
         <h3>Plate Grid Size</h3>
-        <p class="hint">Each plate is 29×29 beads</p>
-        <div class="size-grid" id="size-grid">
-          <label class="size-option selected" data-w="1" data-h="1">
-            <input type="radio" name="plate-size" value="1x1" checked />
-            <div class="size-visual">
-              <div class="size-plates size-1x1"></div>
-            </div>
-            <span>1 × 1</span>
-            <small>29 × 29 beads</small>
-          </label>
-          <label class="size-option" data-w="2" data-h="2">
-            <input type="radio" name="plate-size" value="2x2" />
-            <div class="size-visual">
-              <div class="size-plates size-2x2"></div>
-            </div>
-            <span>2 × 2</span>
-            <small>58 × 58 beads</small>
-          </label>
-          <label class="size-option" data-w="3" data-h="3">
-            <input type="radio" name="plate-size" value="3x3" />
-            <div class="size-visual">
-              <div class="size-plates size-3x3"></div>
-            </div>
-            <span>3 × 3</span>
-            <small>87 × 87 beads</small>
-          </label>
-          <label class="size-option" data-w="4" data-h="4">
-            <input type="radio" name="plate-size" value="4x4" />
-            <div class="size-visual">
-              <div class="size-plates size-4x4"></div>
-            </div>
-            <span>4 × 4</span>
-            <small>116 × 116 beads</small>
-          </label>
-          <label class="size-option" data-w="5" data-h="5">
-            <input type="radio" name="plate-size" value="5x5" />
-            <div class="size-visual">
-              <div class="size-plates size-5x5"></div>
-            </div>
-            <span>5 × 5</span>
-            <small>145 × 145 beads</small>
-          </label>
+        <p class="hint">Each plate is 29×29 beads. Select width and height (1–20).</p>
+        <div class="size-inputs" id="size-inputs">
+          <div class="size-input-group">
+            <label for="plates-x">Width</label>
+            <input type="number" id="plates-x" class="input-text input-number" min="1" max="20" value="1" />
+          </div>
+          <span class="size-times">×</span>
+          <div class="size-input-group">
+            <label for="plates-y">Height</label>
+            <input type="number" id="plates-y" class="input-text input-number" min="1" max="20" value="1" />
+          </div>
+          <div class="size-bead-count" id="size-bead-count">29 × 29 = 841 beads</div>
         </div>
       </div>
 
@@ -224,10 +194,19 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="modal-title">Plate 1</h3>
-        <button class="btn btn-ghost btn-close" id="btn-modal-close">✕</button>
+        <div class="modal-header-actions">
+          <button class="btn btn-sm btn-secondary" id="btn-mark-row" title="Mark a row as complete">✓ Row</button>
+          <button class="btn btn-sm btn-secondary" id="btn-mark-col" title="Mark a column as complete">✓ Col</button>
+          <button class="btn btn-sm btn-secondary" id="btn-mark-plate" title="Mark entire plate as complete">✓ Plate</button>
+          <button class="btn btn-ghost btn-close" id="btn-modal-close">✕</button>
+        </div>
       </div>
       <div class="modal-body">
         <canvas id="plate-zoom-canvas"></canvas>
+      </div>
+      <div class="modal-footer">
+        <span class="zoom-hint">Scroll to zoom · Click a bead to toggle complete</span>
+        <span class="plate-progress" id="plate-progress"></span>
       </div>
     </div>
   </div>
