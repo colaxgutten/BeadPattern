@@ -229,14 +229,21 @@
       <div class="modal-header">
         <h3 id="modal-title">Plate 1</h3>
         <div class="modal-header-actions">
-          <button class="btn btn-sm btn-secondary" id="btn-mark-row" title="Mark a row as complete">✓ Row</button>
-          <button class="btn btn-sm btn-secondary" id="btn-mark-col" title="Mark a column as complete">✓ Col</button>
           <button class="btn btn-sm btn-secondary" id="btn-mark-plate" title="Mark entire plate as complete">✓ Plate</button>
           <button class="btn btn-ghost btn-close" id="btn-modal-close">✕</button>
         </div>
       </div>
       <div class="modal-body">
-        <canvas id="plate-zoom-canvas"></canvas>
+        <div class="zoom-wrapper">
+          <div class="zoom-top-row">
+            <div class="zoom-corner"></div>
+            <div class="zoom-col-headers" id="zoom-col-headers"></div>
+          </div>
+          <div class="zoom-main-row">
+            <div class="zoom-row-headers" id="zoom-row-headers"></div>
+            <canvas id="plate-zoom-canvas"></canvas>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <span class="zoom-hint">Scroll to zoom · Click a bead to toggle complete</span>

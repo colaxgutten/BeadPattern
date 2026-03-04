@@ -364,6 +364,70 @@ body {
 #plate-zoom-canvas { display: block; }
 
 /* ============================================================
+   ZOOM MODAL – ROW/COLUMN HEADER BUTTONS
+   ============================================================ */
+.zoom-wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.zoom-top-row {
+  display: flex;
+  flex-direction: row;
+}
+.zoom-corner {
+  width: 28px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.zoom-col-headers {
+  display: flex;
+  flex-direction: row;
+}
+.zoom-main-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+}
+.zoom-row-headers {
+  display: flex;
+  flex-direction: column;
+  width: 28px;
+}
+.zoom-header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .1s, color .1s;
+  padding: 0;
+  line-height: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.zoom-header-btn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+.zoom-header-btn.complete {
+  background: var(--success);
+  color: #fff;
+}
+.zoom-col-btn {
+  height: 24px;
+  flex-shrink: 0;
+}
+.zoom-row-btn {
+  width: 28px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
    SCROLLBAR
    ============================================================ */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
