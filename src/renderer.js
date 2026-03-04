@@ -384,7 +384,7 @@ async function processImage(algorithm, progressFillEl, progressLabelEl) {
       const x = p % W;
       const y = Math.floor(p / W);
       const color = findClosestColorByAlgorithm(r, g, b, state.enabledColorCodes, algorithm);
-      colorCodes[y][x] = color ? color.code : '11'; // fallback black
+      colorCodes[y][x] = color ? color.code : '18'; // fallback black
     }
     done = end;
     const pct = Math.round((done / total) * 100);
@@ -502,7 +502,7 @@ function renderPlateToCanvas(canvas, pattern, px, py, beadPx, showLabels) {
     for (let col = 0; col < PLATE; col++) {
       const globalRow = py * PLATE + row;
       const globalCol = px * PLATE + col;
-      const code = pattern.colorCodes[globalRow]?.[globalCol] ?? '11';
+      const code = pattern.colorCodes[globalRow]?.[globalCol] ?? '18';
       const color = colorMap[code];
       const cx = col * beadPx + r;
       const cy = row * beadPx + r;
@@ -588,6 +588,8 @@ function openPlateModal(pattern, px, py) {
   // Store for re-render on toggle / zoom
   document._zoomState = { pattern, px, py, beadPx: ZOOM_BEAD };
 
+  buildZoomHeaders();
+  updateZoomHeaders(ZOOM_BEAD);
   updatePlateProgress(px, py);
   document.getElementById('plate-modal').classList.remove('hidden');
 }
@@ -600,6 +602,7 @@ function reRenderZoom() {
   canvas.width = SIZE;
   canvas.height = SIZE;
   renderPlateToCanvas(canvas, z.pattern, z.px, z.py, z.beadPx, state.showCodes);
+  updateZoomHeaders(z.beadPx);
   updatePlateProgress(z.px, z.py);
 }
 
@@ -681,16 +684,64 @@ function persistCompletion() {
   }
 }
 
-// Mark row as complete/incomplete
-document.getElementById('btn-mark-row').addEventListener('click', () => {
+// Build row and column header buttons for the zoom modal
+function buildZoomHeaders() {
+  const colHeaders = document.getElementById('zoom-col-headers');
+  const rowHeaders = document.getElementById('zoom-row-headers');
+  colHeaders.innerHTML = '';
+  rowHeaders.innerHTML = '';
+
+  for (let i = 1; i <= 29; i++) {
+    const colBtn = document.createElement('button');
+    colBtn.className = 'zoom-header-btn zoom-col-btn';
+    colBtn.textContent = i;
+    colBtn.dataset.col = i;
+    colBtn.addEventListener('click', () => toggleZoomColumn(i - 1));
+    colHeaders.appendChild(colBtn);
+
+    const rowBtn = document.createElement('button');
+    rowBtn.className = 'zoom-header-btn zoom-row-btn';
+    rowBtn.textContent = i;
+    rowBtn.dataset.row = i;
+    rowBtn.addEventListener('click', () => toggleZoomRow(i - 1));
+    rowHeaders.appendChild(rowBtn);
+  }
+}
+
+// Update header button sizes and completion highlight
+function updateZoomHeaders(beadPx) {
+  const z = document._zoomState;
+  document.querySelectorAll('.zoom-col-btn').forEach((btn, i) => {
+    btn.style.width = beadPx + 'px';
+    if (z && state.completed) {
+      const globalCol = z.px * 29 + i;
+      let allDone = true;
+      for (let r = 0; r < 29; r++) {
+        const gr = z.py * 29 + r;
+        if (!state.completed[gr] || !state.completed[gr][globalCol]) { allDone = false; break; }
+      }
+      btn.classList.toggle('complete', allDone);
+    }
+  });
+  document.querySelectorAll('.zoom-row-btn').forEach((btn, i) => {
+    btn.style.height = beadPx + 'px';
+    if (z && state.completed) {
+      const globalRow = z.py * 29 + i;
+      let allDone = true;
+      for (let c = 0; c < 29; c++) {
+        const gc = z.px * 29 + c;
+        if (!state.completed[globalRow] || !state.completed[globalRow][gc]) { allDone = false; break; }
+      }
+      btn.classList.toggle('complete', allDone);
+    }
+  });
+}
+
+// Toggle all beads in a plate row as complete/incomplete
+function toggleZoomRow(row) {
   const z = document._zoomState;
   if (!z || !state.completed) return;
-  const rowStr = prompt('Enter row number (1–29):');
-  if (!rowStr) return;
-  const row = parseInt(rowStr, 10) - 1;
-  if (isNaN(row) || row < 0 || row >= 29) return;
   const globalRow = z.py * 29 + row;
-  // Toggle: if all complete → uncomplete, else complete
   let allDone = true;
   for (let c = 0; c < 29; c++) {
     if (!state.completed[globalRow][z.px * 29 + c]) { allDone = false; break; }
@@ -700,18 +751,13 @@ document.getElementById('btn-mark-row').addEventListener('click', () => {
   }
   reRenderZoom();
   persistCompletion();
-});
+}
 
-// Mark column as complete/incomplete
-document.getElementById('btn-mark-col').addEventListener('click', () => {
+// Toggle all beads in a plate column as complete/incomplete
+function toggleZoomColumn(col) {
   const z = document._zoomState;
   if (!z || !state.completed) return;
-  const colStr = prompt('Enter column number (1–29):');
-  if (!colStr) return;
-  const col = parseInt(colStr, 10) - 1;
-  if (isNaN(col) || col < 0 || col >= 29) return;
   const globalCol = z.px * 29 + col;
-  // Toggle: if all complete → uncomplete, else complete
   let allDone = true;
   for (let r = 0; r < 29; r++) {
     if (!state.completed[z.py * 29 + r][globalCol]) { allDone = false; break; }
@@ -721,7 +767,7 @@ document.getElementById('btn-mark-col').addEventListener('click', () => {
   }
   reRenderZoom();
   persistCompletion();
-});
+}
 
 // Mark entire plate as complete/incomplete
 document.getElementById('btn-mark-plate').addEventListener('click', () => {
