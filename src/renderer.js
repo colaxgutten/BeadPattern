@@ -568,10 +568,11 @@ function renderPlateOverview(pattern) {
   }
 }
 
-// Scroll-to-zoom on the plate overview
+// Scroll-to-zoom on the plate overview (Ctrl/Cmd + wheel)
 let _overviewRafPending = false;
 document.getElementById('plate-overview').addEventListener('wheel', e => {
   if (!state.currentPattern) return;
+  if (!e.ctrlKey && !e.metaKey) return; // require modifier for zoom
   e.preventDefault();
   const delta = e.deltaY < 0 ? 1 : -1;
   state.overviewBeadPx = Math.min(20, Math.max(1, state.overviewBeadPx + delta));
