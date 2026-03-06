@@ -492,11 +492,11 @@ function openPatternView(pattern) {
 
 function calcFitBeadPx(pattern) {
   const container = document.getElementById('plate-overview');
-  const availW = container.clientWidth - 48;   // padding + gap budget
-  const availH = container.clientHeight - 48;
-  const gap = 16;
-  const labelH = 28;  // plate label + progress height
-  const padBorder = 24; // thumb padding + border
+  const availW = container.clientWidth - 16;   // padding + gap budget
+  const availH = container.clientHeight - 16;
+  const gap = 6;
+  const labelH = 24;  // plate label + progress height
+  const padBorder = 12; // thumb padding + border
 
   // How many plates fit in one row / one column
   const cols = pattern.platesX;
@@ -639,10 +639,10 @@ function renderPlateToCanvas(canvas, pattern, px, py, beadPx, showLabels) {
       // Color code label
       if (showLabels && beadPx >= 20 && !isComplete) {
         ctx.fillStyle = getLabelColor(color ? color.hex : '#1a1a1a');
-        ctx.font = `bold ${Math.max(8, Math.round(beadPx * 0.28))}px monospace`;
+        ctx.font = `bold ${Math.max(8, Math.round(beadPx * 0.36))}px monospace`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`#${code}`, cx, cy);
+        ctx.fillText(code, cx, cy);
       }
     }
   }
