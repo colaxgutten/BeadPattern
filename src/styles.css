@@ -266,6 +266,16 @@ body {
 .preview-loading .progress-bar { width: 80%; }
 #wizard-step-3.wizard-step { max-width: 1100px; }
 
+.tile-lines-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 10px; cursor: pointer; font-size: 13px;
+  color: var(--text2); user-select: none;
+}
+.tile-lines-toggle input[type="checkbox"] {
+  accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer;
+}
+.tile-lines-toggle span { font-weight: 600; }
+
 /* ============================================================
    PATTERN VIEW
    ============================================================ */
@@ -276,12 +286,14 @@ body {
   position: sticky; top: 0; z-index: 10; flex-shrink: 0;
 }
 .pattern-header h2 { font-size: 20px; flex: 1; }
-.pattern-header-actions { display: flex; gap: 8px; margin-left: auto; }
+.pattern-header-actions { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+.overview-zoom-hint { font-size: 12px; color: var(--text3); margin-right: 8px; }
 
 .plate-overview {
   flex: 1; padding: 24px;
   display: flex; flex-wrap: wrap; gap: 16px;
-  align-content: flex-start; overflow-y: auto;
+  align-content: center; justify-content: center;
+  overflow: auto;
 }
 .plate-thumb {
   background: var(--surface); border: 2px solid var(--border);
