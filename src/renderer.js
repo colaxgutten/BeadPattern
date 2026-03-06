@@ -22,6 +22,12 @@ const state = {
   currentPattern: null,   // loaded/saved pattern
   showCodes: false,
 
+  // preview tile lines
+  showTileLines: false,
+
+  // plate overview zoom
+  overviewBeadPx: 6,
+
   // completion tracking – 2D boolean array matching colorCodes dimensions
   completed: null,        // boolean[][]
 };
@@ -94,6 +100,8 @@ function resetWizard() {
   document.getElementById('algorithm-select').value = 'cieLab';
   document.getElementById('algorithm-description').textContent =
     ALGORITHM_DESCRIPTIONS.cieLab;
+  state.showTileLines = false;
+  document.getElementById('tile-lines-checkbox').checked = false;
 
   // reset save step UI
   document.getElementById('pattern-name-input').value = '';
@@ -227,6 +235,17 @@ document.getElementById('algorithm-select').addEventListener('change', (e) => {
   generatePreview();
 });
 
+document.getElementById('tile-lines-checkbox').addEventListener('change', (e) => {
+  state.showTileLines = e.target.checked;
+  if (state.pendingPattern) {
+    renderFullPreview(
+      document.getElementById('preview-bead-canvas'),
+      state.pendingPattern.colorCodes, state.platesX, state.platesY,
+      state.showTileLines
+    );
+  }
+});
+
 document.getElementById('btn-step3-prev').addEventListener('click', () => {
   state.processingCancelled = true;
   goToWizardStep(2);
@@ -261,7 +280,8 @@ async function generatePreview() {
 
     renderFullPreview(
       document.getElementById('preview-bead-canvas'),
-      result.colorCodes, state.platesX, state.platesY
+      result.colorCodes, state.platesX, state.platesY,
+      state.showTileLines
     );
 
     document.getElementById('preview-loading').classList.add('hidden');
@@ -274,7 +294,7 @@ async function generatePreview() {
   }
 }
 
-function renderFullPreview(canvas, colorCodes, platesX, platesY) {
+function renderFullPreview(canvas, colorCodes, platesX, platesY, showTileLines) {
   const W = platesX * 29;
   const H = platesY * 29;
   const maxDim = 400;
@@ -301,6 +321,31 @@ function renderFullPreview(canvas, colorCodes, platesX, platesY) {
       } else {
         ctx.fillRect(x * beadPx, y * beadPx, beadPx, beadPx);
       }
+    }
+  }
+
+  // Draw tile cut lines
+  if (showTileLines && (platesX > 1 || platesY > 1)) {
+    ctx.strokeStyle = 'rgba(255, 60, 60, 0.8)';
+    ctx.lineWidth = Math.max(1, beadPx >= 3 ? 2 : 1);
+    ctx.setLineDash([]);
+
+    // Vertical cut lines
+    for (let px = 1; px < platesX; px++) {
+      const x = px * 29 * beadPx;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+
+    // Horizontal cut lines
+    for (let py = 1; py < platesY; py++) {
+      const y = py * 29 * beadPx;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
     }
   }
 }
@@ -427,6 +472,7 @@ function goToWizardStep(n) {
 function openPatternView(pattern) {
   state.currentPattern = pattern;
   state.showCodes = false;
+  state._overviewInitialized = false; // reset so overview fits on open
   document.getElementById('btn-toggle-codes').textContent = 'Show Codes';
   document.getElementById('pattern-view-title').textContent = pattern.name || 'Pattern';
 
@@ -440,16 +486,49 @@ function openPatternView(pattern) {
     state.completed = Array.from({ length: H }, () => new Array(W).fill(false));
   }
 
-  renderPlateOverview(pattern);
   showView('view-pattern');
+  renderPlateOverview(pattern);
+}
+
+function calcFitBeadPx(pattern) {
+  const container = document.getElementById('plate-overview');
+  const availW = container.clientWidth - 48;   // padding + gap budget
+  const availH = container.clientHeight - 48;
+  const gap = 16;
+  const labelH = 28;  // plate label + progress height
+  const padBorder = 24; // thumb padding + border
+
+  // How many plates fit in one row / one column
+  const cols = pattern.platesX;
+  const rows = pattern.platesY;
+
+  const perThumbW = (availW - gap * (cols - 1)) / cols - padBorder;
+  const perThumbH = (availH - gap * (rows - 1)) / rows - padBorder - labelH;
+
+  const beadPx = Math.max(1, Math.floor(Math.min(perThumbW, perThumbH) / 29));
+  return Math.min(beadPx, 12); // cap so they don't get excessively large
 }
 
 function renderPlateOverview(pattern) {
   const container = document.getElementById('plate-overview');
   container.innerHTML = '';
 
-  const THUMB_BEAD = 6; // pixels per bead in thumbnail
+  // Calculate bead px to fit all plates on screen
+  const fitPx = calcFitBeadPx(pattern);
+  // Use the stored zoom value, but start from fit value on first render
+  if (!state._overviewInitialized) {
+    state.overviewBeadPx = fitPx;
+    state._overviewInitialized = true;
+  }
+
+  const THUMB_BEAD = state.overviewBeadPx;
   const plateSize = 29 * THUMB_BEAD;
+
+  // Use CSS grid with the exact number of columns matching platesX
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = `repeat(${pattern.platesX}, max-content)`;
+  container.style.justifyContent = 'center';
+  container.style.alignContent = 'center';
 
   for (let py = 0; py < pattern.platesY; py++) {
     for (let px = 0; px < pattern.platesX; px++) {
@@ -488,6 +567,22 @@ function renderPlateOverview(pattern) {
     }
   }
 }
+
+// Scroll-to-zoom on the plate overview
+let _overviewRafPending = false;
+document.getElementById('plate-overview').addEventListener('wheel', e => {
+  if (!state.currentPattern) return;
+  e.preventDefault();
+  const delta = e.deltaY < 0 ? 1 : -1;
+  state.overviewBeadPx = Math.min(20, Math.max(1, state.overviewBeadPx + delta));
+  if (!_overviewRafPending) {
+    _overviewRafPending = true;
+    requestAnimationFrame(() => {
+      _overviewRafPending = false;
+      renderPlateOverview(state.currentPattern);
+    });
+  }
+}, { passive: false });
 
 function renderPlateToCanvas(canvas, pattern, px, py, beadPx, showLabels) {
   const ctx = canvas.getContext('2d');
